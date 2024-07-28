@@ -289,3 +289,80 @@ void SPI_SSOEConfig(SPI_RegDef_t *pSPIx, uint8_t en){
 		pSPIx->CR2 &= ~(1 << SPI_CR2_SSOE);
 	}
 }
+
+
+/**************************************************
+ * @fcn				- SPI_IRQPriorityConfig
+ *
+ * @brief			- This function configures the IRQ priority given an IRQ Number
+ *
+ * @param0			- Position in NVIC for interrupt routine
+ * @param1			- Set the priority for the interrupt
+ *
+ * @return			- none
+ *
+ * @Note			- none
+ *
+ *************************************************/
+void SPI_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority){
+	uint8_t iprx_reg, iprx_sect, shift;
+	//1. Get priority number register (iprx)
+	iprx_reg = IRQNumber / 4;
+	//2. Get section in priority number register (iprx) i.e. 0,1,2,3
+	iprx_sect = IRQNumber % 4;
+	//3. Calculate amount to shift by
+	shift = (8 * iprx_sect) + (8 - NO_PR_BITS_IMPLEMENTED);
+	//4. Apply value to NVIC priority register
+	*(NVIC_PR_BASE_ADDR + iprx_reg) |= (IRQPriority << shift);
+}
+
+/**************************************************
+ * @fcn				- SPI_IRQHandling
+ *
+ * @brief			- This function handles the interrupt request at pin pinNumber
+ *
+ * @param0			- pinNumber is the pin number at which we clear the pending IRQ
+ *
+ * @return			- none
+ *
+ * @Note			- none
+ *
+ *************************************************/
+void SPI_IRQHandling(uint8_t pinNumber){
+	//Clear the EXTI PR register (pending register) corresponding to pin number
+	if(EXTI->PR & (1 << pinNumber)){
+		//Clear by writing 1 to corresponding bit position
+		EXTI->PR |= (1 << pinNumber);
+	}
+}
+
+/**************************************************
+ * @fcn				- SPI_SendDataINT
+ *
+ * @brief			- This function handles INT config. for sendin gdata
+ *
+ * @param0			- pSPIxHandle is the pointer to the SPI handle
+ * @param1			- pTxBuffer is the pointer to the buffer of data to send
+ * @param2			- len is the length of data we want to send
+ *
+ * @return			- none
+ *
+ * @Note			- none
+ *
+ *************************************************/
+uint8_t SPI_SendDataINT(SPI_Handle_t *pSPIxHandle, uint8_t *pTxBuffer, uint32_t len){
+	if(pSPIxHandle->TxState != SPI_BSY_RX){
+		//Save Tx buffer address in handle structure
+		pSPIxHandle->pTxBuffer = pTxBuffer;
+		pSPIxHandle->TxLen = len;
+
+		//Mark Tx state as busy
+		pSPIxHandle->TxState = SPI_BSY_TX;
+
+		//Enable TXEIE to enable interrupt when TXE flag is set
+		pSPIxHandle->pSPIx->CR2 |= ( 1 << SPI_CR2_TXEIE);
+
+		//Data transmission handled by ISR
+	}
+	return pSPIxHandle->TxState;
+}
