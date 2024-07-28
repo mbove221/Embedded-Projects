@@ -419,8 +419,6 @@ typedef struct{
 #define FLAG_SET 		SET
 #define FLAG_RESET		RESET
 
-#include "stm32f407xx_gpio_driver.h"
-#include "stm32f407xx_spi_driver.h"
 
 /***************************************************************************
  * 				    Bit shift positions for SPI peripheral
@@ -470,5 +468,8 @@ typedef struct{
 #define SPI_SR_OVR		6
 #define SPI_SR_BSY		7
 #define FRE				8
+
+#include "stm32f407xx_gpio_driver.h"
+#include "stm32f407xx_spi_driver.h"
 
 #endif /* INC_STM32F407XX_H_ */

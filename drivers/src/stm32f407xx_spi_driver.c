@@ -184,6 +184,42 @@ void SPI_SendData(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint32_t len){
 }
 
 /**************************************************
+ * @fcn				- SPI_ReceieveData
+ *
+ * @brief			- This function receieves data through the SPI peripheral
+ * @param0			- Pointer to SPIx peripheral memory address
+ * @param1			- Pointer to Rx Buffer
+ * @param2			- Pointer to 32-bit integer to specify number of bytes to send
+ *
+ * @return			- none
+ *
+ * @Note			- This is a blocking function (non-interrupt based)
+ * 					- We are using polling
+ *
+**************************************************/
+void SPI_ReceieveData(SPI_RegDef_t *pSPIx, uint8_t *pRxBuffer, uint32_t len){
+	while(len > 0){
+		//Wait for RXNE to be set
+		while(SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_RESET);
+
+		//If 16-bit data frame
+		if((pSPIx->CR1>>SPI_CR1_DFF) & 1){
+			//Read data from SPI DR into *pRxBuffer
+			*((uint16_t*) pRxBuffer) = pSPIx->DR;
+			len -= 2;
+			(uint16_t*) pRxBuffer++;
+		}
+		//Otherwise (8-bit data frame)
+		else{
+			//Read data from SPI DR into *pRxBuffer
+			*pRxBuffer = pSPIx->DR;
+			pRxBuffer++;
+		}
+		len--;
+	}
+}
+
+/**************************************************
  * @fcn				- SPI_PeripheralControl
  *
  * @brief			- This function enables or disable SPI peripheral
