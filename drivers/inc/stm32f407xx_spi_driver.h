@@ -48,6 +48,13 @@ typedef struct{
 #define SPI_BSY_TX 2
 
 /*
+ * Possible SPI Application Events
+ */
+#define SPI_EVENT_TX_CMPLT		0
+#define SPI_EVENT_RX_CMPLT		1
+#define SPI_EVENT_OVR_ERR_CMPLT	2
+
+/*
  * @SPI_Device_Modes
  * SPI possible modes
  */
@@ -155,7 +162,7 @@ void SPI_ReceiveData(SPI_RegDef_t *pSPIx, uint8_t *pRxBuffer, uint32_t len);
  * Interrupt based
  */
 uint8_t SPI_SendDataINT(SPI_Handle_t *pSPIxHandle, uint8_t *pTxBuffer, uint32_t len);
-void SPI_ReceiveDataINT(SPI_Handle_t *pSPIxHandle, uint8_t *pRxBuffer, uint32_t len);
+uint8_t SPI_ReceiveDataINT(SPI_Handle_t *pSPIxHandle, uint8_t *pRxBuffer, uint32_t len);
 
 /*
  * IRQ Configuration and ISR handling
@@ -163,7 +170,7 @@ void SPI_ReceiveDataINT(SPI_Handle_t *pSPIxHandle, uint8_t *pRxBuffer, uint32_t 
 
 void SPI_IRQInterruptConfig(uint8_t IRQNumber, uint8_t IRQEn);
 void SPI_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
-void SPI_IRQHandling(uint8_t pinNumber);
+void SPI_IRQHandling(SPI_Handle_t *pSPIxHandle);
 
 /*
  * Other peripheral control APIs
@@ -173,5 +180,18 @@ void SPI_PeripheralControl(SPI_RegDef_t *pSPIx, uint8_t en);
 void SPI_SSIConfig(SPI_RegDef_t *pSPIx, uint8_t en);
 void SPI_SSOEConfig(SPI_RegDef_t *pSPIx, uint8_t en);
 
+/*
+ * Interrupt Helper functions
+ */
+
+void SPI_ClearOVRFlag(SPI_RegDef_t *pSPIx);
+void SPI_CloseTransmission(SPI_Handle_t *pSPIxHandle);
+void SPI_CloseReception(SPI_Handle_t *pSPIxHandle);
+
+/*
+ * Application callback
+ */
+
+void SPI_ApplicationEventCallback(SPI_Handle_t *pSPIxHandle, uint8_t AppEvent);
 
 #endif /* INC_STM32F407XX_SPI_DRIVER_H_ */
