@@ -89,6 +89,7 @@ typedef struct{
  * @SPI_DFF
  * SPI Data frame format (8 bit or 16 bits)
  */
+
 #define SPI_DFF_8BITS 	0
 #define SPI_DFF_16BITS 	1
 
@@ -133,17 +134,18 @@ typedef struct{
 /*
  * Check if SPI flag is set
  */
+
 uint32_t SPI_GetFlagStatus(SPI_RegDef_t *pSPIx, uint8_t FlagName);
 
 /*
  * Peripheral Clock Setup
  */
+
 void SPI_PeriClockControl(SPI_RegDef_t *pSPIx, uint8_t en);
 
 /*
  * Init and De-Init
  */
-
 
 void SPI_Init(SPI_Handle_t *pSPIxHandle);
 void SPI_DeInit(SPI_RegDef_t *pSPIx);
@@ -155,12 +157,14 @@ void SPI_DeInit(SPI_RegDef_t *pSPIx);
 /*
  * Non-interrupt based
  */
+
 void SPI_SendData(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint32_t len);
 void SPI_ReceiveData(SPI_RegDef_t *pSPIx, uint8_t *pRxBuffer, uint32_t len);
 
 /*
  * Interrupt based
  */
+
 uint8_t SPI_SendDataINT(SPI_Handle_t *pSPIxHandle, uint8_t *pTxBuffer, uint32_t len);
 uint8_t SPI_ReceiveDataINT(SPI_Handle_t *pSPIxHandle, uint8_t *pRxBuffer, uint32_t len);
 
