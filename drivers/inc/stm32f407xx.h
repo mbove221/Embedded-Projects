@@ -86,7 +86,7 @@
 
 #define APB1_AREA_SIZE 				0x0400U /* Common size for peripherals on APB1 Bus */
 
-#define I2C1_BASE_ADDR				(APB1__PERIPH_BASE_ADDR + 0x5400U) /* I2C1 Base address */
+#define I2C1_BASE_ADDR				(APB1_PERIPH_BASE_ADDR + 0x5400U) /* I2C1 Base address */
 #define I2C2_BASE_ADDR				(I2C1_BASE_ADDR + APB1_AREA_SIZE) /* I2C2 Base address */
 #define I2C3_BASE_ADDR				(I2C2_BASE_ADDR + APB1_AREA_SIZE) /* I2C3 Base address */
 
@@ -255,6 +255,10 @@ typedef struct{
 #define SPI1 	((SPI_RegDef_t*) SPI1_BASE_ADDR)
 #define SPI2	((SPI_RegDef_t*) SPI2_BASE_ADDR)
 #define SPI3	((SPI_RegDef_t*) SPI3_BASE_ADDR)
+
+#define I2C1  				((I2C_RegDef_t*) I2C1_BASE_ADDR)
+#define I2C2  				((I2C_RegDef_t*) I2C2_BASE_ADDR)
+#define I2C3  				((I2C_RegDef_t*) I2C3_BASE_ADDR)
 
 /*
  * Clock enable macros for GPIOx peripherals
