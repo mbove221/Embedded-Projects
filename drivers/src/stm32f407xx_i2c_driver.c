@@ -10,6 +10,88 @@
 const uint16_t AHB_PRESCALAR[8] = {2,4,8,16,64,128,256,512};
 const uint8_t APB1_PRESCALAR[4] = {2,4,8,16};
 
+static void I2C_GenerateStartCondition(I2C_RegDef_t *pI2Cx);
+static void I2C_ExecuteAddressPhaseRead(I2C_RegDef_t *pI2Cx, uint8_t SlaveAddr);
+static void I2C_ExecuteAddressPhaseWrite(I2C_RegDef_t *pI2Cx, uint8_t SlaveAddr);
+static void I2C_ClearADDRFlag(I2C_Handle_t *pI2CHandle);
+static void I2C_ManageAcking(I2C_RegDef_t *pI2Cx, uint8_t en);
+
+static void I2C_GenerateStartCondition(I2C_RegDef_t *pI2Cx){
+	pI2Cx->CR1 |= (1 << I2C_CR1_START);
+
+
+}
+
+static void I2C_ExecuteAddressPhaseRead(I2C_RegDef_t *pI2Cx, uint8_t SlaveAddr)
+{
+	SlaveAddr = SlaveAddr << 1;
+	SlaveAddr |= 1; //SlaveAddr is Slave address + r/nw bit=1
+	pI2Cx->DR = SlaveAddr;
+}
+
+static void I2C_ExecuteAddressPhaseWrite(I2C_RegDef_t *pI2Cx, uint8_t SlaveAddr)
+{
+	SlaveAddr = SlaveAddr << 1;
+	SlaveAddr &= ~(1); //SlaveAddr is Slave address + r/nw bit=0
+	pI2Cx->DR = SlaveAddr;
+}
+
+
+
+static void I2C_ClearADDRFlag(I2C_Handle_t *pI2CHandle )
+{
+	uint32_t dummy_read;
+	//check for device mode
+	if(pI2CHandle->pI2Cx->SR2 & ( 1 << I2C_SR2_MSL))
+	{
+		//device is in master mode
+		if(pI2CHandle->TxRxState == I2C_BSY_RX)
+		{
+			if(pI2CHandle->RxSize  == 1)
+			{
+				//first disable the ack
+				I2C_ManageAcking(pI2CHandle->pI2Cx,DISABLE);
+
+				//clear the ADDR flag ( read SR1 , read SR2)
+				dummy_read = pI2CHandle->pI2Cx->SR1;
+				dummy_read = pI2CHandle->pI2Cx->SR2;
+				(void)dummy_read;
+			}
+
+		}
+		else
+		{
+			//clear the ADDR flag ( read SR1 , read SR2)
+			dummy_read = pI2CHandle->pI2Cx->SR1;
+			dummy_read = pI2CHandle->pI2Cx->SR2;
+			(void)dummy_read;
+
+		}
+
+	}
+	else
+	{
+		//device is in slave mode
+		//clear the ADDR flag ( read SR1 , read SR2)
+		dummy_read = pI2CHandle->pI2Cx->SR1;
+		dummy_read = pI2CHandle->pI2Cx->SR2;
+		(void)dummy_read;
+	}
+}
+
+static void I2C_ManageAcking(I2C_RegDef_t *pI2Cx, uint8_t en)
+{
+	if(en == I2C_ACK_ENABLE)
+	{
+		//enable the ack
+		pI2Cx->CR1 |= ( 1 << I2C_CR1_ACK);
+	}else if (en == I2C_ACK_DISABLE)
+	{
+		//disable the ack
+		pI2Cx->CR1 &= ~( 1 << I2C_CR1_ACK);
+	}
+}
+
 uint32_t RCC_GetPLLOPClk(void){
 	return 1;
 }
@@ -125,4 +207,59 @@ void I2C_Init(I2C_Handle_t *pI2CxHandle){
 
 }
 
-void I2C_DeInit(I2C_RegDef_t *pI2Cx);
+void I2C_DeInit(I2C_RegDef_t *pI2Cx){
+
+}
+
+uint32_t I2C_GetFlagStatus(I2C_RegDef_t *pI2Cx, uint8_t FlagName){
+	if(pI2Cx->SR1 & FlagName){
+		return FLAG_SET;
+	}
+	return FLAG_RESET;
+}
+
+void I2C_MasterSendData(I2C_Handle_t *pI2CxHandle, uint8_t *pTxBuffer, uint32_t len, uint8_t SlaveAddr, uint8_t Sr){
+	//1. Generate START Condition
+	I2C_GenerateStartCondition(pI2CxHandle->pI2Cx);
+
+	//2. Confirm start generation is complete by checking SB flag in SR1
+	//Until SB is cleared, SCL will be stretched
+	while(! I2C_GetFlagStatus(pI2CxHandle, I2C_FLAG_SB) );
+
+	//3.Send address of slave with r/nw bit set to w(0) for total 8 bits
+	I2C_ExecuteAddressPhaseRead(pI2CxHandle->pI2Cx, SlaveAddr);
+
+	//4. Confirm that address phase is completed by checking the ADDR flag in SR1
+	while( !  I2C_GetFlagStatus(pI2CxHandle->pI2Cx,I2C_FLAG_ADDR)   );
+
+	//5. clear the ADDR flag according to its software sequence
+	//Note: Until ADDR is cleared SCL will be stretched (pulled to LOW)
+	I2C_ClearADDRFlag(pI2CxHandle);
+
+	//6. send the data until len becomes 0
+
+	while(len > 0)
+	{
+		while(! I2C_GetFlagStatus(pI2CxHandle->pI2Cx,I2C_FLAG_TXE) ); //Wait till TXE is set
+		pI2CxHandle->pI2Cx->DR = *pTxBuffer;
+		pTxBuffer++;
+		len--;
+	}
+
+	//7. when Len becomes zero wait for TXE=1 and BTF=1 before generating the STOP condition
+	//   Note: TXE=1 , BTF=1 , means that both SR and DR are empty and next transmission should begin
+	//   when BTF=1 SCL will be stretched (pulled to LOW)
+
+	while(! I2C_GetFlagStatus(pI2CxHandle->pI2Cx,I2C_FLAG_TXE) );
+
+	while(! I2C_GetFlagStatus(pI2CxHandle->pI2Cx,I2C_FLAG_BTF) );
+
+
+	//8. Generate STOP condition and master need not to wait for the completion of stop condition.
+	//   Note: generating STOP, automatically clears the BTF
+	if(Sr == I2C_DISABLE_SR )
+		I2C_GenerateStopCondition(pI2CxHandle->pI2Cx);
+}
+
+
+
